@@ -114,7 +114,7 @@ data_l <- rep(list(data_m),10)
 for(i in 1:10) data_l[[i]]$holdout <- holdout_10[[i]]
 
 #run the functions
-ss <- stan_kfold(file="C:/temp/UsefulStanCode/R/normal_model_basic_cv.stan",data_l,chains=4,cores=2)
+ss <- stan_kfold(file="/home/mmorgan/Downloads/UsefulStanCode/R/normal_model_basic_cv.stan",data_l,chains=4,cores=2)
 ee <- extract_log_lik_K(ss,holdout_10)
 kk <- kfold(ee) 
 #compare with official loo results
@@ -137,8 +137,8 @@ for(i in 1:10){
 } 
 
 #fit the new models
-ss_comp <- stan_kfold(file="Documents/PostDoc_Ghent/STAN_stuff/Models/normal_model_basic_cv.stan",data_comp,chains=4,cores=2)
-ss_simp <- stan_kfold(file="Documents/PostDoc_Ghent/STAN_stuff/Models/normal_model_basic_cv.stan",data_simp,chains=4,cores=2)
+ss_comp <- stan_kfold(file="/home/mmorgan/Downloads/UsefulStanCode/R/normal_model_basic_cv.stan",data_comp,chains=4,cores=2)
+ss_simp <- stan_kfold(file="/home/mmorgan/Downloads/UsefulStanCode/R/normal_model_basic_cv.stan",data_simp,chains=4,cores=2)
 
 ee_comp <- extract_log_lik_K(ss_comp,holdout_10)
 ee_simp <- extract_log_lik_K(ss_simp,holdout_10)
