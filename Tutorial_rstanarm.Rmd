@@ -1,0 +1,127 @@
+---
+title: "Tutorial rstanarm"
+author: "Michael Morgan"
+date: "10/07/2019"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+---
+
+
+# R Introduction
+
+Example is taken from https://mc-stan.org/users/documentation/case-studies/tutorial_rstanarm.html
+
+```{r setup01, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+A common feature of data structures in education is that units of analysis (e.g., students) are nested in higher organizational clusters (e.g. schools). This kind of structure induces dependence among the responses observed for units within the same cluster. Students in the same school tend to be more alike in their academic and attitudinal characteristics than students chosen at random from the population at large.
+
+Multilevel models are designed to model such within-cluster dependence. Multilevel models recognize the existence of data clustering (at two or more levels) by allowing for residual components at each level in the hierarchy. For example, a two-level model that allows for grouping of student outcomes within schools would include residuals at both the student and school level. The residual variance is thus partitioned into a between-school component (the variance of the school-level residuals) and a within-school component (the variance of the student-level residuals).
+
+In this tutorial, we illustrate how to fit a multilevel linear model within a full Bayesian framework using **rstanarm**. This tutorial is aimed primarily at educational researchers who have used **lme4** in **R** to fit models to their data and who may be interested in learning how to fit Bayesian multilevel models. However, for readers who have not used **lme4** before, we briefly review the use of the package for fitting multilevel models.
+
+```{r setup02}
+# Required Packages
+library(mlmRev)
+library(lme4)
+library(rstanarm)
+library(ggplot2)
+```
+
+## Data example
+
+We will be analyzing the `Gcsemv` dataset (Rasbash et al. 2000) from the **mlmRev** package in **R**. The data include the General Certificate of Secondary Education (GCSE) exam scores of 1,905 students from 73 schools in England on a science subject. The `Gcsemv` dataset consists of the following 5 variables:
+
+* *school*: school identifier
+* *student*: student identifier
+* *gender*: gender of a student (M: Male, F: Female)
+* *written*: total score on written paper
+* *course*: total score on coursework paper
+
+```{r data01}
+# Use example dataset from mlmRev package: GCSE exam score
+data(Gcsemv, package = "mlmRev")
+summary(Gcsemv)
+```
+
+Two components of the exam were recorded as outcome variables: written paper and course work. In this tutorial, only the total score on the courework paper (course) will be analyzed. As seen above, there some of the observations have missing values for certain covariates. While we do not subset the data to only include complete cases to demonstrate that **rstanarm** automatically drops these observations, it is generally good practice to manually do so if required.
+
+```{r data02}
+# Make Male the reference category and rename variable
+Gcsemv$female <- relevel(Gcsemv$gender, "M")
+
+
+# Use only total score on coursework paper 
+GCSE <- subset(x = Gcsemv, 
+               select = c(school, student, female, course))
+
+# Count unique schools and students
+J <- length(unique(GCSE$school))
+N <- nrow(GCSE)
+```
+
+The **rstanarm** package automates several data preprocessing steps making its use very similar to that of **lme4** in the following way.
+
+Input - **rstanarm** is able to take a data frame as input.
+
+Missing Data - **rstanarm** automatically discards observations with NA values for any variable used in the model.
+
+Identifiers - **rstanarm** does not require identifiers to be sequential. We do suggest that it is good practice for all cluster and unit identifiers, as well as categorical variables be stored as factors. This applies to using **lme4** as much as it does to **rstanarm**. One can check the structure of the variables by using the `str()` function.
+
+
+```{r setup03}
+# Check structure of data frame
+str(GCSE)
+```
+
+# Likelihood inference using `lmer()`
+
+In this section, we briefly review three basic multilevel linear models which will be fit in this tutorial. Starting with a varying intercept model with no predictors (Model 1), we then proceed to the varying intercept model with one predictor (Model 2), and the varying intercept and slope model (Model 3).
+
+## Model 1: Varying intercept model with no predictors (Variance components model)
+
+Consider the simplest multilevel model for students $i=1,\ldots,n$ nested within schools $j=1,\ldots,J$ and for whom we have examination scores as responses. We can write a two-level varying intercept model with no predictors using the usual two-stage formulation as
+
+$$y_{ij}=\alpha_j+\epsilon_{ij}, \quad \text{where} \quad \epsilon_{ij}∼N(0,\sigma^2_y)$$
+$$\alpha_j=\mu_\alpha + u_j, \quad \text{where} \quad u_j∼N(0,\sigma^2_\alpha)$$
+
+where $y_{ij}$ is the examination score for the $i^\text{th}$ student in the $j^\text{th}$ school, $\alpha_j$ is the varying intercept for the $j^\text{th}$ school, and $\mu_\alpha$ is the overall mean across schools. Alternatively, the model can be expressed in reduced form as
+
+$$y_{ij} = \mu_\alpha + u_j + \epsilon_{ij}$$
+
+If we further assume that the student-level errors $\epsilon_{ij}$ are normally distributed with mean 0 and variance $\sigma^2_y$, and that the school-level varying intercepts $\alpha_j$ are normally distributed with mean $\mu_\alpha$ and variance $\sigma^2_y$, then the model can be expressed as
+
+$$y_{ij}∼N(\alpha_j,\sigma^2_y)$$
+$$\alpha_j∼N(\mu-\alpha,\sigma^2_\alpha)$$
+
+This model can then be fit using `lmer()`. We specify an intercept (the predictor “1”) and allow it to vary by the level-2 identifier (school). We also specify the `REML = FALSE` option to obtain maximum likelihood (ML) estimates as opposed to the default restricted maximum likelihood (REML) estimates.
+
+```{r model01}
+M1 <- lmer(formula = course ~ 1 + (1 | school), 
+           data = GCSE, 
+           REML = FALSE)
+summary(M1)
+```
+
+Under the `Fixed effects` part of the output, we see that the intercept $\mu_\alpha$, averaged over the population of schools, is estimated as 73.72. Under the `Random effects` part of the output, we see that the between-school standard deviation $\sigma_\alpha$ is estimated as 8.67 and the within-school standard deviation $\sigma_y$ as 13.81.
+
+## Model 2: Varying intercept model with a single predictor
+
+The varying intercept model with an indicator variable for being female $x_{ij}$ can be written as
+
+$$y_{ij} ∼ N(\alpha_j+\beta x_{ij}, \sigma^2_y)$$
+$$\alpha_j ∼ N(\mu_\alpha,\beta x_{ij}^2_\alpha)$$
+
+The equation of the average regression line across schools is $\mu_{ij}=\mu_\alpha+\beta x_{ij}$. The regression lines for specific schools will be parallel to the average regression line (having the same slope $\beta$), but differ in terms of its intercept $\alpha_j$. This model can be estimated by adding `female` to the formula in the `lmer()` function, which will allow only the intercept to vary by school, and while keeping the “slope” for being female constant across schools.
+
+```{r model02}
+M2 <- lmer(formula = course ~ 1 + female + (1 | school), 
+           data = GCSE, 
+           REML = FALSE)
+summary(M2) 
+```
+
