@@ -12,7 +12,7 @@ output:
 
 # R Introduction
 
-Example is taken from https://mc-stan.org/users/documentation/case-studies/tutorial_rstanarm.html
+Example is reproduced from https://mc-stan.org/users/documentation/case-studies/tutorial_rstanarm.html
 
 ```{r setup01, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -86,8 +86,8 @@ In this section, we briefly review three basic multilevel linear models which wi
 
 Consider the simplest multilevel model for students $i=1,\ldots,n$ nested within schools $j=1,\ldots,J$ and for whom we have examination scores as responses. We can write a two-level varying intercept model with no predictors using the usual two-stage formulation as
 
-$$y_{ij}=\alpha_j+\epsilon_{ij}, \quad \text{where} \quad \epsilon_{ij}∼N(0,\sigma^2_y)$$
-$$\alpha_j=\mu_\alpha + u_j, \quad \text{where} \quad u_j∼N(0,\sigma^2_\alpha)$$
+$$y_{ij}=\alpha_j+\epsilon_{ij}, \quad \text{where} \quad \epsilon_{ij} \sim N(0,\sigma^2_y)$$
+$$\alpha_j=\mu_\alpha + u_j, \quad \text{where} \quad u_j \sim N(0,\sigma^2_\alpha)$$
 
 where $y_{ij}$ is the examination score for the $i^\text{th}$ student in the $j^\text{th}$ school, $\alpha_j$ is the varying intercept for the $j^\text{th}$ school, and $\mu_\alpha$ is the overall mean across schools. Alternatively, the model can be expressed in reduced form as
 
@@ -95,8 +95,8 @@ $$y_{ij} = \mu_\alpha + u_j + \epsilon_{ij}$$
 
 If we further assume that the student-level errors $\epsilon_{ij}$ are normally distributed with mean 0 and variance $\sigma^2_y$, and that the school-level varying intercepts $\alpha_j$ are normally distributed with mean $\mu_\alpha$ and variance $\sigma^2_y$, then the model can be expressed as
 
-$$y_{ij}∼N(\alpha_j,\sigma^2_y)$$
-$$\alpha_j∼N(\mu-\alpha,\sigma^2_\alpha)$$
+$$y_{ij} \sim N(\alpha_j,\sigma^2_y)$$
+$$\alpha_j \sim N(\mu-\alpha,\sigma^2_\alpha)$$
 
 This model can then be fit using `lmer()`. We specify an intercept (the predictor “1”) and allow it to vary by the level-2 identifier (school). We also specify the `REML = FALSE` option to obtain maximum likelihood (ML) estimates as opposed to the default restricted maximum likelihood (REML) estimates.
 
@@ -113,15 +113,264 @@ Under the `Fixed effects` part of the output, we see that the intercept $\mu_\al
 
 The varying intercept model with an indicator variable for being female $x_{ij}$ can be written as
 
-$$y_{ij} ∼ N(\alpha_j+\beta x_{ij}, \sigma^2_y)$$
-$$\alpha_j ∼ N(\mu_\alpha,\beta x_{ij}^2_\alpha)$$
+$$y_{ij} \sim N(\alpha_j+\beta x_{ij}, \sigma^2_y)$$
+$$\alpha_j \sim N\left( \mu_\alpha, \sigma^2_\alpha \right)$$
+
+
 
 The equation of the average regression line across schools is $\mu_{ij}=\mu_\alpha+\beta x_{ij}$. The regression lines for specific schools will be parallel to the average regression line (having the same slope $\beta$), but differ in terms of its intercept $\alpha_j$. This model can be estimated by adding `female` to the formula in the `lmer()` function, which will allow only the intercept to vary by school, and while keeping the “slope” for being female constant across schools.
 
-```{r model02}
+```{r model02-01}
 M2 <- lmer(formula = course ~ 1 + female + (1 | school), 
            data = GCSE, 
            REML = FALSE)
 summary(M2) 
 ```
 
+
+The average regression line across schools is thus estimated as $\hat{\mu}_{ij}=69.73+6.74x_{ij}$, with $\sigma_\alpha$ and $\sigma_y$ estimated as 8.76 and 13.41 respectively. Treating these estimates of $\mu_\alpha$, $\beta$, $\sigma^2_y$, and $\sigma^2_\alpha$ as the true parameter values, we can then obtain the Best Linear Unbiased Predictions (BLUPs) for the school-level errors $\hat{u}_j=\hat{\alpha}_j−\hat{\mu}_\alpha$.
+
+The BLUPs are equivalent to the so-called Empirical Bayes (EB) prediction, which is the mean of the posterior distribution of $u_j$ given all the estimated parameters, as well as the random variables $y_{ij}$ and $x_{ij}$ for the cluster. These predictions are called "Bayes" because they make use of the pre-specified prior distribution $\alpha_j \sim N(\mu_\alpha,\sigma^2_\alpha)$, and by extension $u_j \sim N(0,\sigma^2_\alpha)$, and called "Empirical" because the parameters of this prior, $\mu_\alpha$ and $\sigma^2_\alpha$, in addition to $\beta$ and $\sigma^2_y$, are estimated from the data.
+
+Compared to the Maximum Likelihood (ML) approach of predicting values for $u_j$ by using only the estimated parameters and data from cluster $j$, the EB approach additionally consider the prior distribution of $u_j$, and produces predicted values closer to 0 (a phenomenon described as shrinkage or partial pooling). To see why this phenomenon is called shrinkage, we usually express the estimates for $u_j$ obtained from EB prediction as $\hat{u}^\text{EB}j=\hat{R}_j \hat{u}^\text{ML}_j$ where $\hat{u}^\text{ML}_j$ are the ML estimates, and $\hat{R}_j=\frac{\sigma^2_\alpha}{\sigma^2_\alpha+\frac{\sigma^2_y}{n_j}}$ is the so-called Shrinkage factor.
+
+```{r model02-02}
+head(ranef(M2)$school)
+```
+
+These values estimate how much the intercept is shifted up or down in particular schools. For example, in the first school in the dataset, the estimated intercept is about 10.17 lower than average, so that the school-specific regression line is $(69.73−10.17)+6.74x_{ij}$.
+
+Gelman and Hill (2006) characterize multilevel modeling as partial pooling (also called shrinkage), which is a compromise between two extremes: complete pooling in which the clustering is not considered in the model at all, and no pooling, in which separate intercepts are estimated for each school as coefficients of dummy variables. The estimated school-specific regression lines in the above model are based on partial pooling estimates. To show this, we first estimate the intercept and slope in each school three ways:
+
+```{r model02-03}
+# Complete-pooling regression
+pooled <- lm(formula = course ~ female,
+             data = GCSE)
+a_pooled <- coef(pooled)[1]   # complete-pooling intercept
+b_pooled <- coef(pooled)[2]   # complete-pooling slope
+
+# No-pooling regression
+nopooled <- lm(formula = course ~ 0 + school + female,
+               data = GCSE)
+a_nopooled <- coef(nopooled)[1:J]   # 73 no-pooling intercepts              
+b_nopooled <- coef(nopooled)[J+1]
+
+# Partial pooling (multilevel) regression
+a_part_pooled <- coef(M2)$school[, 1]
+b_part_pooled <- coef(M2)$school[, 2]
+```
+
+Then, we plot the data and school-specific regression lines for a selection of eight schools using the following commands:
+
+```{r model02-04}
+# (0) Set axes & choose schools
+y <- GCSE$course
+x <- as.numeric(GCSE$female) - 1 + runif(N, -.05, .05)
+schid <- GCSE$school
+sel.sch <- c("65385", "68207", "60729", "67051", "50631", "60427", "64321", "68137")
+
+# (1) Subset 8 of the schools; generate data frame
+df <- data.frame(y, x, schid)
+df8 <- subset(df, schid %in% sel.sch)
+
+# (2) Assign complete-pooling, no-pooling, partial pooling estimates
+df8$a_pooled <- a_pooled 
+df8$b_pooled <- b_pooled
+df8$a_nopooled <- a_nopooled[df8$schid]
+df8$b_nopooled <- b_nopooled
+df8$a_part_pooled <- a_part_pooled[df8$schid]
+df8$b_part_pooled <- b_part_pooled[df8$schid]
+
+# (3) Plot regression fits for the 8 schools
+ggplot(data = df8, 
+       aes(x = x, y = y)) + 
+  facet_wrap(facets = ~ schid, 
+             ncol = 4) + 
+  theme_bw() +
+  geom_jitter(position = position_jitter(width = .05, 
+                                         height = 0)) +
+  geom_abline(aes(intercept = a_pooled, 
+                  slope = b_pooled), 
+              linetype = "solid", 
+              color = "blue", 
+              size = 0.5) +
+  geom_abline(aes(intercept = a_nopooled, 
+                  slope = b_nopooled), 
+              linetype = "longdash", 
+              color = "red", 
+              size = 0.5) + 
+  geom_abline(aes(intercept = a_part_pooled, 
+                  slope = b_part_pooled), 
+              linetype = "dotted", 
+              color = "purple", 
+              size = 0.7) + 
+  scale_x_continuous(breaks = c(0, 1), 
+                     labels = c("male", "female")) + 
+  labs(title = "Complete-pooling, No-pooling, and Partial pooling estimates",
+       x = "", 
+       y = "Total score on coursework paper")+theme_bw( base_family = "serif")
+```
+
+The blue-solid, red-dashed, and purple-dotted lines show the complete-pooling, no-pooling, and partial pooling estimates respectively. We see that the estimated school-specific regression line from the partial pooling estimates lies between the complete-pooling and no-pooling regression lines. There is more pooling (purple dotted line closer to blue solid line) in schools with small sample sizes.
+
+## Model 3: Varying intercept and slope model with a single predictor
+
+We now extend the varying intercept model with a single predictor to allow both the intercept and the slope to vary randomly across schools using the following model:
+
+$$y_{ij} \sim N(\alpha_j+\beta_j x_{ij},\sigma^2_y)$$
+$$ \begin{pmatrix} \alpha_j \\ \beta_j \end{pmatrix} \sim N \left( \begin{pmatrix} \mu_\alpha \\ \mu_\beta \end{pmatrix}, \begin{pmatrix} \sigma^2_\alpha & \rho\sigma_\alpha\sigma_\beta \\ \rho\sigma_\alpha\sigma_\beta & \sigma^2_\beta \end{pmatrix} \right)$$
+
+Note that now we have variation in the $\alpha_j$’s and the $\beta_j$’s, and also a correlation parameter $\rho$ between $\alpha_j$ and $\beta_j$. This model can be fit using `lmer()` as follows:
+
+```{r model03-01}
+M3 <- lmer(formula = course ~ 1 + female + (1 + female | school), 
+           data = GCSE, 
+           REML = FALSE)
+summary(M3) 
+```
+
+In this model, the residual within-school standard deviation is estimated as $\hat{\sigma}_y= 13.03$. The estimated standard deviations of the school intercepts and the school slopes are $\hat{\sigma}_\alpha=10.15$ and $\hat{\sigma}_\beta=6.92$ respectively. The estimated correlation between varying intercepts and slopes is $\hat{\rho}=−0.52$. We can use code similar to that presented in section 2.2 to plot the data and school-specific regression lines for a selection of eight schools.
+
+```{r model03-02}
+# Complete-pooling regression
+pooled <- lm(formula = course ~ female,
+             data = GCSE)
+a_pooled <- coef(pooled)[1]   # complete-pooling intercept
+b_pooled <- coef(pooled)[2]   # complete-pooling slope
+
+# No-pooling regression
+nopooled <- lm(formula = course ~ school*female, data = GCSE)
+a_nopooled <- coef(nopooled)[1:J] + c(0, rep(coef(nopooled)[1], J-1))   # 73 no-pooling intercepts, remembering to add in the intitial value
+b_nopooled <- coef(nopooled)[(J+1):(2*J)] + c(0, rep(coef(nopooled)[J+1], J-1)) # 73 no-pooling slopes, remembering to add in the intitial value
+
+# Partial pooling (multilevel) regression
+a_part_pooled <- coef(M3)$school[, 1]
+b_part_pooled <- coef(M3)$school[, 2]
+
+# (0) Set axes & choose schools
+y <- GCSE$course
+x <- as.numeric(GCSE$female) - 1 + runif(N, -.05, .05)
+schid <- GCSE$school
+sel.sch <- c("65385", "68207", "60729", "67051", "50631", "60427", "64321", "68137")
+
+# (1) Subset 8 of the schools; generate data frame
+df <- data.frame(y, x, schid)
+df8 <- subset(df, schid %in% sel.sch)
+
+# (2) Assign complete-pooling, no-pooling, partial pooling estimates
+df8$a_pooled <- a_pooled 
+df8$b_pooled <- b_pooled
+df8$a_nopooled <- a_nopooled[df8$schid]
+df8$b_nopooled <- b_nopooled[df8$schid]
+df8$a_part_pooled <- a_part_pooled[df8$schid]
+df8$b_part_pooled <- b_part_pooled[df8$schid]
+
+# (3) Plot regression fits for the 8 schools
+ggplot(data = df8, 
+       aes(x = x, y = y)) + 
+  facet_wrap(facets = ~ schid, 
+             ncol = 4) + 
+  theme_bw() +
+  geom_jitter(position = position_jitter(width = .05, 
+                                         height = 0)) +
+  geom_abline(aes(intercept = a_pooled, 
+                  slope = b_pooled), 
+              linetype = "solid", 
+              color = "blue", 
+              size = 0.5) +
+  geom_abline(aes(intercept = a_nopooled, 
+                  slope = b_nopooled), 
+              linetype = "longdash", 
+              color = "red", 
+              size = 0.5) + 
+  geom_abline(aes(intercept = a_part_pooled, 
+                  slope = b_part_pooled), 
+              linetype = "dotted", 
+              color = "purple", 
+              size = 0.7) + 
+  scale_x_continuous(breaks = c(0, 1), 
+                     labels = c("male", "female")) + 
+  labs(title = "Complete-pooling, No-pooling, and Partial pooling estimates",
+       x = "", 
+       y = "Total score on coursework paper")+theme_bw( base_family = "serif")
+```
+
+# Bayesian inference for Model 1
+
+We can quickly and easily fit many multilevel models using the `lmer()` function in **R**. As previously mentioned, functions such as `lmer()` are based on a combination of maximum likelihood (ML) estimation of the model parameters, and empirical Bayes (EB) predictions of the varying intercepts and/or slopes. However, in some instances, when the number of groups is small or when the model contains many varying coefficients or non-nested components, the ML approach may not work as well in part because there may not be enough information to estimate variance parameters precisely. In such cases, Restricted Maximum Likelihood (REML) Estimation provides more reasonable inferences.
+
+A fully Bayesian approach also provides reasonable inferences in these instances with the added benefit of accounting for all the uncertainty in the parameter estimates when predicting the varying intercepts and slopes, and their associated uncertainty. This is one of several reasons that one should be interested in fully Bayesian estimation. Other reasons are discussed in Section 3.4.3. One may start by quickly fitting many specifications in building a model using the `lmer()` function, and then take advantage of the flexibility of a fully Bayesian approach using **rstanarm** to obtain simulations summarizing uncertainty about coefficients, predictions, and other quantities of interest.
+
+In this section, we present how to fit and evaluate Model 1 using the **rstanarm** package. Alternatively, but not covered in this tutorial, one can also create a hand-written program in **Stan** and run it using the **rstan** package.
+
+## Using the **rstanarm** package
+
+Many relatively simple models can be fit using the **rstanarm** package without writing any code in the **Stan** language. The **rstanarm** package is a wrapper for the **rstan** package that enables the most common applied regression models to be estimated using Markov Chain Monte Carlo (MCMC) but still be specified using customary R modeling syntax. Education researchers can use Bayesian estimation for multilevel models with only minimal changes to their existing code with `lmer()`.
+
+For example, Model 1 with default prior distributions for $\mu_\alpha$, $\sigma_\alpha$, and $\sigma_y$ can be specified using the **rstanarm** package by prepending `stan_` to the  `lmer` call:
+
+```{r rstanmodel01-01}
+M1_stanlmer <- stan_lmer(formula = course ~ 1 + (1 | school), 
+                         data = GCSE,
+                         seed = 349)
+summary(M1_stanlmer)
+```
+
+This `stan_lmer()` function is similar in syntax to `lmer()` but rather than performing maximum likelihood estimation, Bayesian estimation is performed via MCMC. As each step in the MCMC estimation approach involves random draws from the parameter space, we include a seed option to ensure that each time the code is run, `stan_lmer` outputs the same results.
+
+## Prior distributions
+
+Model 1 is a varying intercept model with normally distributed student residuals and school-level intercepts: $4y_{ij} \sim N(\alpha_j,\sigma^2_y)$, and $\alpha_j \sim N(\mu_\alpha,\sigma^2_\alpha)$. The normal distribution for the $\alpha_j$’s can be thought of as a prior distribution for these varying intercepts. The parameters of this prior distribution, $\mu_\alpha$ and $\sigma_\alpha$, are estimated from the data when using maximum likelihood estimation. In full Bayesian inference, all the hyperparameters ($\mu_\alpha$ and $\sigma_\alpha$), along with the other unmodeled parameters (in this case, $\sigma_y$) also need a prior distribution.
+
+Here, we use the default prior distributions for the hyperparameters in `stan_lmer` by not specifying any prior options in `stan_lmer()` function. The default priors are intended to be weakly informative in that they provide moderate regularization and help stabilize computation. It should be noted that the authors of **rstanarm** suggest not relying on **rstanarm** to specify the default prior for a model, but rather, to specify the priors explicitly even if they are indeed the current default, as updates to the package may result in different defaults.
+
+First, before accounting for the scale of the variables, $\mu_\alpha$ is given normal prior distribution with mean 0 and standard deviation 10. That is, $\mu_\alpha \sim N(0,10^2)$. The standard deviation of this prior distribution, 10, is five times as large as the standard deviation of the response if it were standardized. This should be a close approximation to a noninformative prior over the range supported by the likelihood, which should give inferences similar to those obtained by maximum likelihood methods if similarly weak priors are used for the other parameters.
+
+Second, the (unscaled) prior for $\sigma_y$ is set to an exponential distribution with rate parameter set to 1.
+
+Third, in order to specify a prior for the variances and covariances of the varying (or “random”) effects, **rstanarm** will decompose this matrix into a correlation matrix of the varying effects and a function of their variances. Since there is only one varying effect in this example, the default (unscaled) prior for $\sigma_\alpha$ that **rstanarm** uses reduces to an exponential distribution with rate parameter set to 1.
+
+It should also be noted that `rstanarm` will scale the priors unless the `autoscale = FALSE` option is used. After fitting a model using **stan_lmer**, we can check the priors that are used by invoking the `prior_summary()` function.
+
+```{r rstanmodel01-02}
+# Obtain a summary of priors used
+prior_summary(object = M1_stanlmer) 
+```
+
+```{r rstanmodel01-03}
+# Obtain SD of outcome
+sd(GCSE$course, na.rm = TRUE)
+```
+
+As seen above, the scales of the priors for $\mu_\alpha$ and $\sigma_y$ are set to 163.21 and 16.32 respectively after rescaling. Since the default prior for the intercept is normal with a scale parameter of 10, the rescaled prior is also normal but with a scale parameter of $\text{scale} \times \text(SD}(y)=10 \times 16.321=163.21$. Similarly, since the default prior for $\sigma_y$ is exponential with a rate parameter of 1 (or equivalently, $\text{scale parameter scale}=\frac{1}{\text{rate}}=1$), the rescaled prior is likewise exponential with a scale parameter of $\text{scale} \times \text(SD}(y)=1 \times 16.321=16.32$.
+
+## Direct output from `stan_lmer`
+
+### Posterior medians and posterior median absolute deviations
+
+We can display a quick summary of the fit from Model 1 by using the `print` method in the following manner:
+
+```{r rstanmodel01-04}
+print(M1_stanlmer, digits = 2)
+```
+
+Here, the point estimate of $\mu_\alpha$ from `stan_lmer` is 73.75 and this corresponds to the median of the posterior draws. This is similar to the ML estimate obtained from `lmer`. The point estimate for $\sigma_\alpha$ from `stan_lmer` is 8.88, which is larger than the ML estimate (8.67). This discrepancy may be partly because the ML approach in `lmer()` does not take into account the uncertainty in $\mu_\alpha$ when estimating $\sigma_\alpha$. The REML approach (8.75) in `lmer()`, as mentioned previously, does in fact account for this uncertainty.
+
+When using `stan_lmer`, standard errors are obtained by considering the median absolute deviation (MAD) of each draw from the median of those draws. It is well known that ML tends to underestimate uncertainties because it relies on point estimates of hyperparameters. Full Bayes, on the other hand, propagates the uncertainty in the hyperparameters throughout all levels of the model and provides more appropriate estimates of uncertainty. See also W. J. Browne, Draper, and others (2006) for further discussion.
+
+### Posterior means, posterior standard deviations, 95% credible intervals and Monte Carlo errors
+
+While the use of the median and the MAD of the posterior draws for estimation and inference are the default outputs from `rstanarm`, users may instead prefer to use the mean and the standard deviation of the posterior distribution instead. Additionally, users may be interested in credible intervals, a concept unique to Bayesian statistics that is the analogue to confidence intervals in frequentist statistics. Unlike the latter, the 95% credible intervals have a 95% probability of containing the true value of the parameter given the data. This 95% credible interval is typically obtained by considering the 2.5th to 97.5th percentiles of the distribution of posterior draws.
+
+To obtain these estimates, we can make use of the `summary` method as follows. The pars argument specifies which the parameter estimates to display. Here, `(Intercept)`, `sigma`, and `Sigma[school:(Intercept),(Intercept)]` correspond to $\mu_\alpha$, $\sigma_y$, and $\sigma^2_\alpha$. The probs argument specifies which quantiles of the posterior distribution to display.
+
+```{r rstanmodel01-05}
+summary(M1_stanlmer, 
+        pars = c("(Intercept)", "sigma", "Sigma[school:(Intercept),(Intercept)]"),
+        probs = c(0.025, 0.975),
+        digits = 2)
+```
+
+It is worthwhile to note that when using the `summary` method, the estimate for the standard deviation $\sigma_y$ is the the mean of the posterior draws of the parameter. This is in contrast to the median of the posterior draws that we obtain when using the `print` method. One advantage of using the median is that the estimate for $\sigma^2_y$ is simply the square of the estimate for $\sigma_y$ if the number of samples is odd. This is not true when using the mean. In this case, and more generally when we need to evaluate other functions of the parameters, we need to access the posterior draws directly. This is detailed in the next section.
+
+Under `Diagnostics`, we refer the reader to Section 5 for more information about `Rhat` and `n_eff`. The values under `mcse` represent estimates for the Monte Carlo standard errors which represent the randomness associated with each MCMC estimation run. That is, with the same data set, repeatedly using an MCMC approach to estimate a paramater produces estimates with a standard deviation equal to the Monte Carlo standard error.
