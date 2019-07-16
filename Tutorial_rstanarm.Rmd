@@ -535,4 +535,34 @@ prop.table(table(a_sims[, 21] > a_sims[, 51]))
 
 This means that the posterior probability that School 60501 is better than School 68271 is 88.3%. Any pair of schools within the sample of schools can be compared in this manner.
 
+# Bayesian inference for Model 2 and 3
+
+## Model 2: Adding a student-level predictor
+
+Researchers might want to extend the varying-intercept models by including observed explanatory variables at the student level $x_{ij}$, in this example, an indicator variable for being female. A simple varying intercept model with one predictor at the student level can be written as $y_{ij} \sim N(\alpha_j+\beta x_{ij},\sigma^2_y)$ and $\alpha_j \sim N(\mu_\alpha,\sigma^2_\alpha)$. We use noninformative prior distributions for the hyperparameters ($\mu_\alpha$ and $\sigma_\alpha$) as specified in the varying intercept model with no predictors. Additionally, the regression coefficient $\beta$ is given normal prior distributions with mean 0 and standard deviation 100. This states, roughly, that we expect this coefficient to be in the range (−100,100), and if the ML estimate is in this range, the prior distribution is providing very little information for the inference.
+
+The above model can be fit using the `stan_lmer()` function in the **rstanarm** package as follows:
+
+```{r rstanmodel02-01}
+M2_stanlmer <- stan_lmer(formula = course ~ female + (1 | school), 
+                         data = GCSE, 
+                         prior = normal(location = 0, 
+                                        scale = 100,
+                                        autoscale = FALSE),
+                         prior_intercept = normal(location = 0, 
+                                                  scale = 100, 
+                                                  autoscale = FALSE),
+                         seed = 349)
+
+prior_summary(object = M2_stanlmer)
+```
+
+```{r rstanmodel02-02}
+M2_stanlmer
+```
+
+Note that instead of the default priors in `stan_lmer`, $\mu_\alpha$ and $\beta$ are given normal prior distributions with mean 0 and standard deviation 100 by specifying the arguments `prior` and `prior_intercept` as `normal(location = 0, scale = 100, autoscale = FALSE)`. To prevent `stan_lmer` from scaling the prior, we need to make sure to append the argument `autoscale = FALSE`.
+
+The point estimates of $\mu_\alpha$, $\beta$, and $\sigma_y$ are almost identical to the ML estimates from the `lmer()` fit. However, partly because ML ignores the uncertainty about $\mu_\alpha$ when estimating $\sigma_\alpha$, the Bayesian estimate for $\sigma_\alpha$ (9.0) is larger than the ML estimate (8.8), as with Model 1.
+
 
