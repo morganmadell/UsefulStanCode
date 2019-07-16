@@ -20,7 +20,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 A common feature of data structures in education is that units of analysis (e.g., students) are nested in higher organizational clusters (e.g. schools). This kind of structure induces dependence among the responses observed for units within the same cluster. Students in the same school tend to be more alike in their academic and attitudinal characteristics than students chosen at random from the population at large.
 
-Multilevel models are designed to model such within-cluster dependence. Multilevel models recognize the existence of data clustering (at two or more levels) by allowing for residual components at each level in the hierarchy. For example, a two-level model that allows for grouping of student outcomes within schools would include residuals at both the student and school level. The residual variance is thus partitioned into a between-school component (the variance of the school-level residuals) and a within-school component (the variance of the student-level residuals).
+*Multilevel models*[^1] are designed to model such within-cluster dependence. Multilevel models recognize the existence of data clustering (at two or more levels) by allowing for residual components at each level in the hierarchy. For example, a two-level model that allows for grouping of student outcomes within schools would include residuals at both the student and school level. The residual variance is thus partitioned into a between-school component (the variance of the school-level residuals) and a within-school component (the variance of the student-level residuals).
 
 In this tutorial, we illustrate how to fit a multilevel linear model within a full Bayesian framework using **rstanarm**. This tutorial is aimed primarily at educational researchers who have used **lme4** in **R** to fit models to their data and who may be interested in learning how to fit Bayesian multilevel models. However, for readers who have not used **lme4** before, we briefly review the use of the package for fitting multilevel models.
 
@@ -66,11 +66,11 @@ N <- nrow(GCSE)
 
 The **rstanarm** package automates several data preprocessing steps making its use very similar to that of **lme4** in the following way.
 
-Input - **rstanarm** is able to take a data frame as input.
+Input - **rstanarm** is able to take a data frame as input[^2].
 
-Missing Data - **rstanarm** automatically discards observations with NA values for any variable used in the model.
+Missing Data - **rstanarm** automatically discards observations with NA values for any variable used in the model[^3].
 
-Identifiers - **rstanarm** does not require identifiers to be sequential. We do suggest that it is good practice for all cluster and unit identifiers, as well as categorical variables be stored as factors. This applies to using **lme4** as much as it does to **rstanarm**. One can check the structure of the variables by using the `str()` function.
+Identifiers - **rstanarm** does not require identifiers to be sequential[^4]. We do suggest that it is good practice for all cluster and unit identifiers, as well as categorical variables be stored as factors. This applies to using **lme4** as much as it does to **rstanarm**. One can check the structure of the variables by using the `str()` function.
 
 
 ```{r setup03}
@@ -111,7 +111,7 @@ Under the `Fixed effects` part of the output, we see that the intercept $\mu_\al
 
 ## Model 2: Varying intercept model with a single predictor
 
-The varying intercept model with an indicator variable for being female $x_{ij}$ can be written as
+The varying intercept model[^5] with an indicator variable for being female $x_{ij}$ can be written as
 
 $$y_{ij} \sim N(\alpha_j+\beta x_{ij}, \sigma^2_y)$$
 $$\alpha_j \sim N\left( \mu_\alpha, \sigma^2_\alpha \right)$$
@@ -130,7 +130,7 @@ summary(M2)
 
 The average regression line across schools is thus estimated as $\hat{\mu}_{ij}=69.73+6.74x_{ij}$, with $\sigma_\alpha$ and $\sigma_y$ estimated as 8.76 and 13.41 respectively. Treating these estimates of $\mu_\alpha$, $\beta$, $\sigma^2_y$, and $\sigma^2_\alpha$ as the true parameter values, we can then obtain the Best Linear Unbiased Predictions (BLUPs) for the school-level errors $\hat{u}_j=\hat{\alpha}_j−\hat{\mu}_\alpha$.
 
-The BLUPs are equivalent to the so-called Empirical Bayes (EB) prediction, which is the mean of the posterior distribution of $u_j$ given all the estimated parameters, as well as the random variables $y_{ij}$ and $x_{ij}$ for the cluster. These predictions are called "Bayes" because they make use of the pre-specified prior distribution $\alpha_j \sim N(\mu_\alpha,\sigma^2_\alpha)$, and by extension $u_j \sim N(0,\sigma^2_\alpha)$, and called "Empirical" because the parameters of this prior, $\mu_\alpha$ and $\sigma^2_\alpha$, in addition to $\beta$ and $\sigma^2_y$, are estimated from the data.
+The BLUPs are equivalent to the so-called Empirical Bayes (EB) prediction, which is the mean of the posterior distribution of $u_j$ given all the estimated parameters, as well as the random variables $y_{ij}$ and $x_{ij}$ for the cluster. These predictions are called "Bayes" because they make use of the pre-specified prior distribution[^6] $\alpha_j \sim N(\mu_\alpha,\sigma^2_\alpha)$, and by extension $u_j \sim N(0,\sigma^2_\alpha)$, and called "Empirical" because the parameters of this prior, $\mu_\alpha$ and $\sigma^2_\alpha$, in addition to $\beta$ and $\sigma^2_y$, are estimated from the data.
 
 Compared to the Maximum Likelihood (ML) approach of predicting values for $u_j$ by using only the estimated parameters and data from cluster $j$, the EB approach additionally consider the prior distribution of $u_j$, and produces predicted values closer to 0 (a phenomenon described as shrinkage or partial pooling). To see why this phenomenon is called shrinkage, we usually express the estimates for $u_j$ obtained from EB prediction as $\hat{u}^\text{EB}j=\hat{R}_j \hat{u}^\text{ML}_j$ where $\hat{u}^\text{ML}_j$ are the ML estimates, and $\hat{R}_j=\frac{\sigma^2_\alpha}{\sigma^2_\alpha+\frac{\sigma^2_y}{n_j}}$ is the so-called Shrinkage factor.
 
@@ -160,7 +160,7 @@ a_part_pooled <- coef(M2)$school[, 1]
 b_part_pooled <- coef(M2)$school[, 2]
 ```
 
-Then, we plot the data and school-specific regression lines for a selection of eight schools using the following commands:
+Then, we plot[^7] the data and school-specific regression lines for a selection of eight schools using the following commands:
 
 ```{r model02-04}
 # (0) Set axes & choose schools
@@ -215,9 +215,10 @@ The blue-solid, red-dashed, and purple-dotted lines show the complete-pooling, n
 
 ## Model 3: Varying intercept and slope model with a single predictor
 
-We now extend the varying intercept model with a single predictor to allow both the intercept and the slope to vary randomly across schools using the following model:
+We now extend the varying intercept model with a single predictor to allow both the intercept and the slope to vary randomly across schools using the following model[^8]:
 
-$$y_{ij} \sim N(\alpha_j+\beta_j x_{ij},\sigma^2_y)$$
+$$y_{ij} \sim N(\alpha_j + \beta_j x_{ij}, \sigma^2_y)$$
+
 $$ \begin{pmatrix} \alpha_j \\ \beta_j \end{pmatrix} \sim N \left( \begin{pmatrix} \mu_\alpha \\ \mu_\beta \end{pmatrix}, \begin{pmatrix} \sigma^2_\alpha & \rho\sigma_\alpha\sigma_\beta \\ \rho\sigma_\alpha\sigma_\beta & \sigma^2_\beta \end{pmatrix} \right)$$
 
 Note that now we have variation in the $\alpha_j$’s and the $\beta_j$’s, and also a correlation parameter $\rho$ between $\alpha_j$ and $\beta_j$. This model can be fit using `lmer()` as follows:
@@ -322,7 +323,7 @@ This `stan_lmer()` function is similar in syntax to `lmer()` but rather than per
 
 Model 1 is a varying intercept model with normally distributed student residuals and school-level intercepts: $4y_{ij} \sim N(\alpha_j,\sigma^2_y)$, and $\alpha_j \sim N(\mu_\alpha,\sigma^2_\alpha)$. The normal distribution for the $\alpha_j$’s can be thought of as a prior distribution for these varying intercepts. The parameters of this prior distribution, $\mu_\alpha$ and $\sigma_\alpha$, are estimated from the data when using maximum likelihood estimation. In full Bayesian inference, all the hyperparameters ($\mu_\alpha$ and $\sigma_\alpha$), along with the other unmodeled parameters (in this case, $\sigma_y$) also need a prior distribution.
 
-Here, we use the default prior distributions for the hyperparameters in `stan_lmer` by not specifying any prior options in `stan_lmer()` function. The default priors are intended to be weakly informative in that they provide moderate regularization and help stabilize computation. It should be noted that the authors of **rstanarm** suggest not relying on **rstanarm** to specify the default prior for a model, but rather, to specify the priors explicitly even if they are indeed the current default, as updates to the package may result in different defaults.
+Here, we use the default prior distributions for the hyperparameters in `stan_lmer` by not specifying any prior options in `stan_lmer()` function. The default priors are intended to be weakly informative in that they provide moderate regularization[^9] and help stabilize computation. It should be noted that the authors of **rstanarm** suggest not relying on **rstanarm** to specify the default prior for a model, but rather, to specify the priors explicitly even if they are indeed the current default, as updates to the package may result in different defaults.
 
 First, before accounting for the scale of the variables, $\mu_\alpha$ is given normal prior distribution with mean 0 and standard deviation 10. That is, $\mu_\alpha \sim N(0,10^2)$. The standard deviation of this prior distribution, 10, is five times as large as the standard deviation of the response if it were standardized. This should be a close approximation to a noninformative prior over the range supported by the likelihood, which should give inferences similar to those obtained by maximum likelihood methods if similarly weak priors are used for the other parameters.
 
@@ -385,7 +386,7 @@ Based on the default settings, `stan_lmer` generates 4 MCMC chains of 2,000 iter
 
 To access the posterior draws for all the parameters, we apply the method `as.matrix()` to the `stanreg` object `M1_stanlmer`. This returns an $S$ by $P$ matrix, where $S$ is the size of the posterior sample (or equivalently, the number of MCMC iterations after warm-up) and $P$ is the number of parameters/quantities. We can then generate a matrix for varying intercepts $\alpha_j$ as well as vectors containing the draws for the within standard deviation and the between variance by manipulating this matrix. Note that in order to select the correct columns for the parameter of interest, it is useful to explore the column names of the matrix `sims`.
 
-A more direct approach to obtaining the posterior draws for specific parameters is to make use of the built in functionality of the `as.matrix` method for `stanreg` objects. When applying the `as.matrix` method to a `stanreg` object, the user is able to specify either an optional character vector of parameter names, or an optional character vector of regular expressions to extract the posterior draws of only the parameters they are interested in. For example, since the parameter representing the overall mean is labelled `(Intercept)`, we can extract the posterior draws of only this parameter by including the option `pars = "(Intercept)"`. Similarly, since the parameters representing the 73 school-level errors all contain the string `b[(Intercept) school:` we can extract all parameters that contain this string by using the option  `regex_pars = "b\\[\\(Intercept\\) school\\:"`.
+A more direct approach to obtaining the posterior draws for specific parameters is to make use of the built in functionality of the `as.matrix` method for `stanreg` objects. When applying the `as.matrix` method to a `stanreg` object, the user is able to specify either an optional character vector of parameter names, or an optional character vector of regular expressions[^10] to extract the posterior draws of only the parameters they are interested in. For example, since the parameter representing the overall mean is labelled `(Intercept)`, we can extract the posterior draws of only this parameter by including the option `pars = "(Intercept)"`. Similarly, since the parameters representing the 73 school-level errors all contain the string `b[(Intercept) school:` we can extract all parameters that contain this string by using the option  `regex_pars = "b\\[\\(Intercept\\) school\\:"`.
 
 ```{r rstanmodel01-06}
 # Extract the posterior draws for all parameters
@@ -565,4 +566,113 @@ Note that instead of the default priors in `stan_lmer`, $\mu_\alpha$ and $\beta$
 
 The point estimates of $\mu_\alpha$, $\beta$, and $\sigma_y$ are almost identical to the ML estimates from the `lmer()` fit. However, partly because ML ignores the uncertainty about $\mu_\alpha$ when estimating $\sigma_\alpha$, the Bayesian estimate for $\sigma_\alpha$ (9.0) is larger than the ML estimate (8.8), as with Model 1.
 
+## Model 3: Allowing for varying slopes across schools
 
+We also use `stan_lmer` to fit Model 3 using the command below. Note that here, we use the default priors which are mostly similar to what was done in Model 1. Additionally, we are also required to specify a prior for the covariance matrix $\Sigma$ for $\alpha_j$ and $\beta_j$ in this Model. `stan_lmer` decomposes this covariance matrix (up to a factor of $\sigma_y$) into (i) a correlation matrix $R$ and (ii) a matrix of variances $V$, and assigns them separate priors as shown below.
+
+$$
+\begin{align}
+\Sigma &=  \begin{pmatrix} \sigma^2_\alpha & \rho\sigma_\alpha\sigma_\beta \\ \rho\sigma_\alpha\sigma_\beta & \sigma^2_\beta \end{pmatrix} \\
+&= \sigma^2_y \begin{pmatrix} \sigma^2_\alpha/\sigma^2_y & \rho\sigma_\alpha\sigma_\beta/\sigma^2_y \\ \rho\sigma_\alpha\sigma_\beta/\sigma^2_y & \sigma^2_\beta/\sigma^2_y \end{pmatrix} \\
+&= \sigma^2_y
+\begin{pmatrix} \sigma_\alpha/\sigma_y & 0 \\ 0 & \sigma_\beta/\sigma_y \end{pmatrix} 
+\begin{pmatrix} 1 & \rho \\ \rho & 1 \end{pmatrix}
+\begin{pmatrix} \sigma_\alpha/\sigma_y & 0 \\ 0 & \sigma_\beta/\sigma_y \end{pmatrix}
+\\
+&= \sigma^2_y VRV
+\end{align}
+$$
+
+The correlation matrix $R$ is 2 by 2 matrix with 1’s on the diagonal and $\rho$’s on the off-diagonal. `stan_lmer` assigns it an LKJ[^11] prior (Lewandowski, Kurowicka, and Joe 2009), with regularization parameter 1. This is equivalent to assigning a uniform prior for $\rho$. The more the regularization parameter exceeds one, the more peaked the distribution for $\rho$ to take the value 0.
+
+The matrix of (scaled) variances $V$ can first be collapsed into a vector of (scaled) variances, and then decomposed into three parts, $J$, $\tau^2$ and $\pi$ as shown below.
+
+$$
+ \begin{pmatrix} \sigma^2_\alpha/\sigma^2_y \\ \sigma^2_\beta/\sigma^2_y \end{pmatrix} = 2 \left( \frac{\sigma^2_\alpha/\sigma^2_y+\sigma^2_\beta/\sigma^2_y}{2} \right) \begin{pmatrix} 
+ \frac{\sigma^2_\alpha/\sigma^2_y}{\sigma^2_\alpha/\sigma^2_y+\sigma^2_\beta/\sigma^2_y} \\ 
+ \frac{\sigma^2_\beta/\sigma^2_y}{\sigma^2_\alpha/\sigma^2_y+\sigma^2_\beta/\sigma^2_y} 
+ \end{pmatrix} = J \tau^2 \pi
+ $$
+ 
+
+In this formulation, $J$ is the number of varying effects in the model (here, $J=2$), $\tau^2$ can be viewed as an average (scaled) variance across the varying effects $\alpha_j$ and $\beta_j$, and $\pi$ is a non-negative vector that sums to 1 (called a Simplex/probability vector). A symmetric Dirichlet[^12] distribution with concentration parameter set to 1 is then used as the prior for $\pi$. By default, this implies a jointly uniform prior over all Simplex vectors of the same size. A scale-invariant Gamma prior with shape and scale parameters both set to 1 is then assigned for $\tau$. This is equivalent to assigning as a prior the exponential distribution with rate parameter set to 1 which is consistent with the prior assigned to $\sigma_y$.
+
+```{r rstanmodel03-01}
+M3_stanlmer <- stan_lmer(formula = course ~ female + (1 + female | school), 
+                         data = GCSE,
+                         seed = 349)
+prior_summary(object = M3_stanlmer)
+```
+
+```{r rstanmodel03-02}
+M3_stanlmer
+```
+
+Here, we notice that the point estimates for $\mu_\alpha$ and $\sigma_y$ are identical to the ML estimates from `lmer()` fit. The point estimate for $\beta$ is slightly different in this Model (7.12 compared to 7.13). Furthermore, as in the previous two models, the Bayesian estimate for $\sigma_\alpha$ (10.3) is larger than the ML estimate (10.15). Additionally, the Bayesian estimates for $\sigma\beta$ (7.1) and $\rho$ (-0.48) are larger than the corresponding ML estimates (6.92 and -0.52 respectively).
+
+# Evaluating model convergence
+
+By default, all **rstanarm** modeling functions will run 4 randomly initialized Markov chains, each for 2,000 iterations (including a warmup period of 1,000 iterations). All chains must converge to the target distribution for inferences to be valid. The diagnostics which we use to assess whether the chains have converged to the posterior distribution are the statistics $\hat{R}$ and $\text{N}_\text{eff}$ (Gelman and Rubin 1992). Each parameter has the $\hat{R}$ and $\text{N}_\text{eff}$ statistic associated with it. As seen previously, these statistics are automatically generated when using the `summary` method.
+
+The $\hat{R}$ is essentially the ratio of between-chain variance to within-chain variance analogous to ANOVA. The \hat{R} statistic should be less than 1.1 if the chains have converged. To see a plot of the \hat{R} values across parameters we can use the `plot` method for `stanreg` object `M1_stanlmer`:
+
+```{r rstan convergence-01}
+plot(M1_stanlmer, "rhat")
+```
+
+The $\text{N}_\text{eff}$ statistic represents the effective number of simulation draws. If the draws were independent $\text{N}_\text{eff}$ would be the number of saved draws, 4,000 (4 chains × (2,000 iterations - 1,000 iterations for warmup)), but $\text{N}_\text{eff}$ tends to be smaller than 4,000 because Markov chain simulations tend to be autocorrelated. The $\text{N}_\text{eff}$ statistic should typically be at least 100 across parameters. We can plot a histogram of the ratio of effective sample size to total sample size:
+
+```{r rstan convergence-02}
+plot(M1_stanlmer, "ess")
+```
+
+# References
+
+Browne, William J, David Draper, and others. 2006. “A Comparison of Bayesian and Likelihood-Based Methods for Fitting Multilevel Models.” *Bayesian Analysis* 1 (3): 473–514.
+
+Gelman, Andrew, and Jennifer Hill. 2006. *Data Analysis Using Regression and Multilevel/Hierarchical Models*. Cambridge University Press.
+
+Gelman, Andrew, and Donald B Rubin. 1992. “Inference from Iterative Simulation Using Multiple Sequences.” *Statistical Science*. JSTOR, 457–72.
+
+Goldstein, Harvey, and David J Spiegelhalter. 1996. “League Tables and Their Limitations: Statistical Issues in Comparisons of Institutional Performance.” *Journal of the Royal Statistical Society. Series A (Statistics in Society)*, 385–443.
+
+Lewandowski, Daniel, Dorota Kurowicka, and Harry Joe. 2009. “Generating Random Correlation Matrices Based on Vines and Extended Onion Method.” *Journal of Multivariate Analysis* 100 (9). Elsevier: 1989–2001.
+
+Rasbash, Jon, William Browne, Harvey Goldstein, Min Yang, Ian Plewis, Michael Healy, Geoff Woodhouse, David Draper, Ian Langford, and Toby Lewis. 2000. “A User’s Guide to Mlwin.” University of London, Institute of Education, Centre for Multilevel Modelling.
+
+
+
+
+[^1]: Also known as *hierarchical linear models*, *random-effects models*, *random coefficient models*, or *mixed models*.
+
+[^2]: **Stan** requires the data to be in the form of a list or an environment.
+
+[^3]: **Stan** does not accept either NA values even for variables that are not being modeled.
+
+[^4]: **Stan** requires identifiers to be sequential.
+
+[^5]: Equivalently, the model can be expressed using a two-stage formulation as
+$$\begin{align} y_{ij} &= \alpha_j+\beta x_{ij} + \epsilon_{ij}, \\
+\alpha_j &= \mu_\alpha+u_j \end{align},$$
+or in a reduced form as
+$$y_{ij}=\mu_\alpha+\beta x_{ij}+u_j+\epsilon_{ij}$$
+where $\epsilon_{ij} \sim N(0,\sigma^2_y)$ and $u_j \sim N(0,\sigma^2_\alpha)$.
+
+[^6]: We elaborate more on prior distributions in Section 3.2
+
+[^7]: For users who are not familiar with **ggplot2** syntax, we refer them to [here](https://www.rstudio.com/wp-content/uploads/2015/03/ggplot2-cheatsheet.pdf).
+
+[^8]: Equivalently, the model can be expressed in a two-stage formulation as
+$$\begin{align} y_{ij} &= \alpha_j+\beta_j x_{ij} + \epsilon_{ij}, \\
+\alpha_j &= \mu_\alpha + u_j, \\
+\beta_j &= \mu_\beta + v_j\end{align},$$
+or in a reduced form as $y_{ij} = \mu_\alpha+\mu_\beta x_{ij}+u_j+v_j x_{ij}+\epsilon_{ij}$
+where $\epsilon_{ij} \sim N(0,\sigma^2_y)$ and $\begin{pmatrix} u_j \\ v_j \end{pmatrix} \sim N \left( \begin{pmatrix} 0 \\ 0 \end{pmatrix},\begin{pmatrix} \sigma^2_\alpha & \rho\sigma_\alpha\sigma_\beta \\ \rho\sigma_\alpha\sigma_\beta & \sigma^2_\beta \end{pmatrix} \right)$.
+
+[^9]: Regularization can be regarded as a technique to ensure that estimates are bounded within an acceptable range of values.
+
+[^10]: For more information on regular expressions, see [here](http://www.rstudio.com/wp-content/uploads/2016/09/RegExCheatsheet.pdf)
+
+[^11]: For more details about the LKJ distribution, see [here](http://www.psychstatistics.com/2014/12/27/d-lkj-priors/) and [here](http://mc-stan.org/users/documentation/case-studies/lotka-volterra-predator-prey.html)
+
+[^12]: The Dirichlet distribution is a multivariate generalization of the beta distribution with one concentration parameter, which can be interpreted as prior counts of a multinomial random variable (the simplex vector in our context), for details, see [here](https://cran.r-project.org/web/packages/rstanarm/vignettes/glmer.html#details).
