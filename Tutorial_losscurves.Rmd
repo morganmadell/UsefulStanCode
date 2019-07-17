@@ -1,0 +1,27 @@
+---
+title: "Tutorial losscurves"
+author: "Michael Morgan"
+date: "17/07/2019"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+---
+
+
+# R Introduction
+
+Example is reproduced from https://mc-stan.org/users/documentation/case-studies/losscurves_casestudy.html
+
+```{r setup01, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r data01}
+# Use example dataset from mlmRev package: GCSE exam score
+data(Gcsemv, package = "mlmRev")
+summary(Gcsemv)
+```
+
