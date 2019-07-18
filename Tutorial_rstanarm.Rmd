@@ -1,7 +1,7 @@
 ---
 title: "Tutorial rstanarm"
 author: "Michael Morgan"
-date: "10/07/2019"
+date: "`r Sys.Date()`"
 output: 
   html_document:
     toc: true
@@ -624,6 +624,10 @@ The $\text{N}_\text{eff}$ statistic represents the effective number of simulatio
 
 ```{r rstan convergence-02}
 plot(M1_stanlmer, "ess")
+```
+
+```{r SessionInfo}
+devtools::session_info()
 ```
 
 # References
